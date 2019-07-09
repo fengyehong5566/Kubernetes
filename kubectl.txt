@@ -1,0 +1,415 @@
+在管理工具界面使用kubectl语法运行如下命令：
+		kubectl [command] [TYPE] [NAME] [flags]
+	command：指定要在一个或多个资源执行的操作，例如操作create，get，describe，delete。
+	TYPE：指定资源类型Resource types。Resource types会区分大小写，也可以指定单数，复数或缩写的形式。
+	NAME：指定Resource的Name。Name区分大小写，如果省略Name，则显示所有资源的详细信息
+	flags：指定可选flags。例如，你可以使用-s或--server flag来指定Kubernetes API Server的地址和端口。
+	
+	注：命令行指定的flags将覆盖默认值和任何相应的环境变量。
+	
+	
+[root@localhost ~]# kubectl  --help
+kubectl controls the Kubernetes cluster manager.
+
+ Find more information at: https://kubernetes.io/docs/reference/kubectl/overview/
+
+Basic Commands (Beginner):
+  create         Create a resource from a file or from stdin.
+				   从文件或stdin创建资源。
+  expose         Take a replication controller, service, deployment or pod and expose it as a new Kubernetes Service
+				   将复制控制器、服务、部署或pod作为新的Kubernetes服务公开
+  run            Run a particular image on the cluster
+				   在集群上运行特定的映像
+  set            Set specific features on objects
+				   设置对象的特定特性
+
+Basic Commands (Intermediate):
+  explain        Documentation of resources
+  
+  get            Display one or many resources
+  
+  edit           Edit a resource on the server
+  
+  delete         Delete resources by filenames, stdin, resources and names, or by resources and label selector
+					按文件名、stdin、资源和名称删除资源，或按资源和标签选择器删除资源
+
+Deploy Commands:
+  rollout        Manage the rollout of a resource
+					管理资源的推出
+  scale          Set a new size for a Deployment, ReplicaSet, Replication Controller, or Job
+					为部署、副本集、复制控制器或作业设置新大小
+  autoscale      Auto-scale a Deployment, ReplicaSet, or ReplicationController
+					自动伸缩部署、副本集或副本控制器
+
+Cluster Management Commands:
+  certificate    Modify certificate resources.
+					资源修改证书。
+  cluster-info   Display cluster info
+  
+  top            Display Resource (CPU/Memory/Storage) usage.
+  
+  cordon         Mark node as unschedulable
+					将节点标记为不可调度
+  uncordon       Mark node as schedulable
+  
+  drain          Drain node in preparation for maintenance
+					排水节点，准备维修
+  taint          Update the taints on one or more nodes
+					更新一个或多个节点上的污染
+
+Troubleshooting and Debugging Commands:[故障排除和调试命令]
+  describe       Show details of a specific resource or group of resources
+					显示特定资源或资源组的详细信息
+  logs           Print the logs for a container in a pod
+  					在pod中打印容器的日志
+  attach         Attach to a running container
+  					附加到正在运行的容器上
+  exec           Execute a command in a container
+  					在容器中执行命令
+  port-forward   Forward one or more local ports to a pod
+  					将一个或多个本地端口转发到一个pod
+  proxy          Run a proxy to the Kubernetes API server
+  					运行Kubernetes API服务器的代理
+  cp             Copy files and directories to and from containers.
+  					从容器中复制文件和目录。
+  auth           Inspect authorization
+  					检查授权
+
+Advanced Commands:
+  diff           Diff live version against would-be applied version
+  					区分实时版本和潜在的应用版本
+  apply          Apply a configuration to a resource by filename or stdin
+  					通过文件名或stdin对资源应用配置
+					如果资源不存在则新建，如果资源存在，则更新资源字段进行更新
+  patch          Update field(s) of a resource using strategic merge patch
+  					使用策略合并补丁更新资源的字段
+  replace        Replace a resource by filename or stdin
+  					用文件名或stdin替换资源
+  wait           Experimental: Wait for a specific condition on one or many resources.
+  					实验性:等待一个或多个资源上的特定条件。
+  convert        Convert config files between different API versions
+  					在不同的API版本之间转换配置文件
+  kustomize      Build a kustomization target from a directory or a remote url.
+  					从目录或远程url构建kustomization目标。
+
+Settings Commands:
+  label          Update the labels on a resource
+  					
+  annotate       Update the annotations on a resource
+  					更新资源上的注释
+  completion     Output shell completion code for the specified shell (bash or zsh)
+  					指定shell的输出shell完成代码(bash或zsh)
+
+Other Commands:
+  api-resources  Print the supported API resources on the server
+  					在服务器上打印支持的API资源
+  api-versions   Print the supported API versions on the server, in the form of "group/version"
+  					在服务器上以“组/版本”的形式打印支持的API版本
+  config         Modify kubeconfig files
+  					
+  plugin         Provides utilities for interacting with plugins.
+  					提供与插件交互的实用程序。
+  version        Print the client and server version information
+  					
+
+格式化输出
+要以特定的格式向终端窗口输出详细信息，可以在 kubectl 命令中添加 -o 或者 -output 标志。
+输出格式	描述
+-o=custom-columns=<spec>	使用逗号分隔的自定义列列表打印表格
+-o=custom-columns-file=<filename>	使用 文件中的自定义列模板打印表格
+-o=json		输出 JSON 格式的 API 对象
+-o=jsonpath=<template>		打印 jsonpath 表达式中定义的字段
+-o=jsonpath-file=<filename>		打印由 文件中的 [jsonpath](/docs/user-guide/jsonpath) 表达式定义的字段
+-o=name		仅打印资源名称
+-o=wide		以纯文本格式输出任何附加信息，对于 Pod ，包含节点名称
+-o=yaml		输出 YAML 格式的 API 对象
+
+Kubectl 详细输出与调试
+使用 -v 或 --v 标志跟着一个整数来指定日志级别。这里 描述了通用的 kubernetes 日志约定和相关的日志级别。
+详细等级	描述
+--v=0	总是对操作人员可见。
+--v=1	合理的默认日志级别，如果您不需要详细输出。
+--v=2	可能与系统的重大变化相关的，有关稳定状态的信息和重要的日志信息。这是对大多数系统推荐的日志级别。
+--v=3	有关更改的扩展信息。
+--v=4	调试级别详细输出。
+--v=6	显示请求的资源。
+--v=7	显示HTTP请求的header。
+--v=8	显示HTTP请求的内容
+					
+					
+Usage:
+  kubectl [flags] [options]
+
+Use "kubectl <command> --help" for more information about a given command.
+Use "kubectl options" for a list of global command-line options (applies to all commands).
+
+
+
+[root@master ~]# kubectl options
+The following options can be passed to any command:【以下选项可以传递给任何命令】
+
+      --alsologtostderr=false: log to standard error as well as files
+								记录标准错误以及文件
+      --as='': Username to impersonate for the operation
+				用于冒充操作的用户名
+      --as-group=[]: Group to impersonate for the operation, this flag can be repeated to specify multiple groups.
+					组要​​模拟操作，可以重复此标志来指定多个组。
+      --cache-dir='/root/.kube/http-cache': Default HTTP cache directory
+											默认HTTP缓存目录
+      --certificate-authority='': Path to a cert file for the certificate authority
+								证书颁发机构的证书文件的路径
+      --client-certificate='': Path to a client certificate file for TLS
+							TLS的客户端证书文件的路径
+      --client-key='': Path to a client key file for TLS
+						TLS的客户端密钥文件的路径
+      --cluster='': The name of the kubeconfig cluster to use
+					
+      --context='': The name of the kubeconfig context to use
+      --insecure-skip-tls-verify=false: If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
+      --kubeconfig='': Path to the kubeconfig file to use for CLI requests.
+      --log-backtrace-at=:0: when logging hits line file:N, emit a stack trace
+      --log-dir='': If non-empty, write log files in this directory
+      --log-file='': If non-empty, use this log file
+      --log-flush-frequency=5s: Maximum number of seconds between log flushes
+      --logtostderr=true: log to standard error instead of files
+      --match-server-version=false: Require server version to match client version
+  -n, --namespace='': If present, the namespace scope for this CLI request
+      --profile='none': Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)
+      --profile-output='profile.pprof': Name of the file to write the profile to
+      --request-timeout='0': The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests.
+  -s, --server='': The address and port of the Kubernetes API server
+      --skip-headers=false: If true, avoid header prefixes in the log messages
+      --stderrthreshold=2: logs at or above this threshold go to stderr
+      --token='': Bearer token for authentication to the API server
+      --user='': The name of the kubeconfig user to use
+  -v, --v=0: log level for V logs
+      --vmodule=: comma-separated list of pattern=N settings for file-filtered logging
+
+
+
+
+
+[root@k8s-master ~]# kubectl  get --help
+Display one or many resources
+
+ Prints a table of the most important information about the specified resources. You can filter the list using a label selector and the --selector flag. If the desired resource type is namespaced you will only see results in your current
+namespace unless you pass --all-namespaces.
+
+ Uninitialized objects are not shown unless --include-uninitialized is passed.
+
+ By specifying the output as 'template' and providing a Go template as the value of the --template flag, you can filter
+the attributes of the fetched resources.
+
+Use "kubectl api-resources" for a complete list of supported resources.
+
+Examples:
+  # List all pods in ps output format.
+  kubectl get pods
+  
+  # List all pods in ps output format with more information (such as node name).
+  kubectl get pods -o wide
+  
+  # List a single replication controller with specified NAME in ps output format.
+  kubectl get replicationcontroller web
+  
+  # List deployments in JSON output format, in the "v1" version of the "apps" API group:
+  kubectl get deployments.v1.apps -o json
+  
+  # List a single pod in JSON output format.
+  kubectl get -o json pod web-pod-13je7
+  
+  # List a pod identified by type and name specified in "pod.yaml" in JSON output format.
+  kubectl get -f pod.yaml -o json
+  
+  # List resources from a directory with kustomization.yaml - e.g. dir/kustomization.yaml.
+  kubectl get -k dir/
+  
+  # Return only the phase value of the specified pod.
+  kubectl get -o template pod/web-pod-13je7 --template={{.status.phase}}
+  
+  # List resource information in custom columns.
+  kubectl get pod test-pod -o custom-columns=CONTAINER:.spec.containers[0].name,IMAGE:.spec.containers[0].image
+  
+  # List all replication controllers and services together in ps output format.
+  kubectl get rc,services
+  
+  # List one or more resources by their type and names.
+  kubectl get rc/web service/frontend pods/web-pod-13je7
+
+Options:
+  -A, --all-namespaces=false: If present, list the requested object(s) across all namespaces. Namespace in current context is ignored even if specified with --namespace.
+      --allow-missing-template-keys=true: If true, ignore any errors in templates when a field or map key is missing in the template. Only applies to golang and jsonpath output formats.
+      --chunk-size=500: Return large lists in chunks rather than all at once. Pass 0 to disable. This flag is beta and may change in the future.
+      --field-selector='': Selector (field query) to filter on, supports '=', '==', and '!='.(e.g. --field-selector key1=value1,key2=value2). The server only supports a limited number of field queries per type.
+  -f, --filename=[]: Filename, directory, or URL to files identifying the resource to get from a server.
+      --ignore-not-found=false: If the requested object does not exist the command will return exit code 0.
+  -k, --kustomize='': Process the kustomization directory. This flag can't be used together with -f or -R.
+  -L, --label-columns=[]: Accepts a comma separated list of labels that are going to be presented as columns. Names are case-sensitive. You can also use multiple flag options like -L label1 -L label2...
+      --no-headers=false: When using the default or custom-column output format, don't print headers (default print headers).
+  -o, --output='': Output format. One of: json|yaml|wide|name|custom-columns=...|custom-columns-file=...|go-template=...|go-template-file=...|jsonpath=...|jsonpath-file=... 
+	See custom columns [http://kubernetes.io/docs/user-guide/kubectl-overview/#custom-columns], 
+	golang template [http://golang.org/pkg/text/template/#pkg-overview] and jsonpath template [http://kubernetes.io/docs/user-guide/jsonpath].
+      --raw='': Raw URI to request from the server.  Uses the transport specified by the kubeconfig file.
+  -R, --recursive=false: Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.
+  -l, --selector='': Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)
+      --server-print=true: If true, have the server return the appropriate table output. Supports extension APIs and CRDs.
+      --show-kind=false: If present, list the resource type for the requested object(s).
+      --show-labels=false: When printing, show all labels as the last column (default hide labels column)
+      --sort-by='': If non-empty, sort list types using this field specification.  The field specification is expressed as a JSONPath expression (e.g. '{.metadata.name}'). The field in the API resource specified by this JSONPath expression must be an integer or a string.
+      --template='': Template string or path to template file to use when -o=go-template, -o=go-template-file. The template format is golang templates [http://golang.org/pkg/text/template/#pkg-overview].
+  -w, --watch=false: After listing/getting the requested object, watch for changes. Uninitialized objects are excluded if no object name is provided.
+      --watch-only=false: Watch for changes to the requested object(s), without listing/getting first.
+
+Usage:
+  kubectl get
+[(-o|--output=)json|yaml|wide|custom-columns=...|custom-columns-file=...|go-template=...|go-template-file=...|jsonpath=...|jsonpath-file=...]
+(TYPE[.VERSION][.GROUP] [NAME | -l label] | TYPE[.VERSION][.GROUP]/NAME ...) [flags] [options]
+
+Use "kubectl options" for a list of global command-line options (applies to all commands).
+
+
+
+
+
+[root@localhost ~]# kubectl  run --help
+ Create and run a particular image, possibly replicated.
+
+ Creates a deployment or job to manage the created container(s).
+
+Examples:
+  # Start a single instance of nginx.
+  kubectl run nginx --image=nginx
+  
+  # Start a single instance of hazelcast and let the container expose port 5701 .
+  kubectl run hazelcast --image=hazelcast --port=5701
+  
+  # Start a single instance of hazelcast and set environment variables "DNS_DOMAIN=cluster" and "POD_NAMESPACE=default"
+in the container.
+  kubectl run hazelcast --image=hazelcast --env="DNS_DOMAIN=cluster" --env="POD_NAMESPACE=default"
+  
+  # Start a single instance of hazelcast and set labels "app=hazelcast" and "env=prod" in the container.
+  kubectl run hazelcast --image=hazelcast --labels="app=hazelcast,env=prod"
+  
+  # Start a replicated instance of nginx.
+  kubectl run nginx --image=nginx --replicas=5
+  
+  # Dry run. Print the corresponding API objects without creating them.
+  kubectl run nginx --image=nginx --dry-run
+  
+  # Start a single instance of nginx, but overload the spec of the deployment with a partial set of values parsed from JSON.
+  kubectl run nginx --image=nginx --overrides='{ "apiVersion": "v1", "spec": { ... } }'
+  
+  # Start a pod of busybox and keep it in the foreground, don't restart it if it exits.
+  kubectl run -i -t busybox --image=busybox --restart=Never
+  
+  # Start the nginx container using the default command, but use custom arguments (arg1 .. argN) for that command.
+  kubectl run nginx --image=nginx -- <arg1> <arg2> ... <argN>
+  
+  # Start the nginx container using a different command and custom arguments.
+  kubectl run nginx --image=nginx --command -- <cmd> <arg1> ... <argN>
+  
+  # Start the perl container to compute π to 2000 places and print it out.
+  kubectl run pi --image=perl --restart=OnFailure -- perl -Mbignum=bpi -wle 'print bpi(2000)'
+  
+  # Start the cron job to compute π to 2000 places and print it out every 5 minutes.
+  kubectl run pi --schedule="0/5 * * * ?" --image=perl --restart=OnFailure -- perl -Mbignum=bpi -wle 'print bpi(2000)'
+
+Options:
+      --allow-missing-template-keys=true
+		If true, ignore any errors in templates when a field or map key is missing in the template. Only applies to golang and jsonpath output formats.
+
+      --attach=false
+		If true, wait for the Pod to start running, and then attach to the Pod as if 'kubectl attach ...' were called.  Default false, unless '-i/--stdin' is set, in which case the default is true. With '--restart=Never' the exit code of the container process is returned.
+
+      --cascade=true
+		If true, cascade the deletion of the resources managed by this resource (e.g. Pods created by a ReplicationController).  Default true.
+
+      --command=false
+		If true and extra arguments are present, use them as the 'command' field in the container, rather than the 'args' field which is the default.
+
+      --dry-run=false
+		If true, only print the object that would be sent, without sending it.
+
+      --env=[]
+		Environment variables to set in the container
+
+      --expose=false
+		If true, a public, external service is created for the container(s) which are run
+
+  -f, --filename=[]
+		to use to replace the resource.
+
+      --force=false
+		Only used when grace-period=0. If true, immediately remove resources from API and bypass graceful deletion. Note that immediate deletion of some resources may result in inconsistency or data loss and requires confirmation.
+
+      --generator=''
+		The name of the API generator to use, see http://kubernetes.io/docs/user-guide/kubectl-conventions/#generators for a list.
+		
+      --grace-period=-1
+		Period of time in seconds given to the resource to terminate gracefully. Ignored if negative.Set to 1 for immediate shutdown. Can only be set to 0 when --force is true (force deletion).
+
+      --hostport=-1:
+		The host port mapping for the container port. To demonstrate a single-machine container.
+      --image='': 
+		The image for the container to run.
+      --image-pull-policy='':
+		  The image pull policy for the container. If left empty, this value will not be specified by the client and defaulted by the server
+  -k, --kustomize='': 
+  		Process a kustomization directory. This flag can't be used together with -f or -R.
+  -l, --labels='': 
+  		Comma separated labels to apply to the pod(s). Will override previous values.
+      --leave-stdin-open=false: 
+	  	If the pod is started in interactive mode or with stdin, leave stdin open after the first attach completes. By default, stdin will be closed after the first attach completes.
+      --limits='': 
+	  	The resource requirement limits for this container.  For example, 'cpu=200m,memory=512Mi'.  Note that server side components may assign limits depending on the server configuration, such as limit ranges.
+  -o, --output='': 
+  		Output format. One of: json|yaml|name|go-template|go-template-file|template|templatefile|jsonpath|jsonpath-file.
+      --overrides='': 
+	  	An inline JSON override for the generated object. If this is non-empty, it is used to override the generated object. Requires that the object supply a valid apiVersion field.
+      --pod-running-timeout=1m0s: 
+	  	The length of time (like 5s, 2m, or 3h, higher than zero) to wait until at least one pod is running
+      --port='': 
+	  	The port that this container exposes.  If --expose is true, this is also the port used by the service that is created.
+      --quiet=false: 
+	  	If true, suppress prompt messages.
+      --record=false: 
+	  	Record current kubectl command in the resource annotation. If set to false, do not record the command. If set to true, record the command. If not set, default to updating the existing annotation value only if one already exists.
+  -R, --recursive=false: Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.
+  -r, --replicas=1: Number of replicas to create for this container. Default is 1.
+      --requests='': The resource requirement requests for this container.  For example, 'cpu=100m,memory=256Mi'.  Note that server side components may assign requests depending on the server configuration, such as limit ranges.
+      --restart='Always': The restart policy for this Pod.  Legal values [Always, OnFailure, Never].  If set to 'Always' a deployment is created, if set to 'OnFailure' a job is created, if set to 'Never', a regular pod is created. For the latter two --replicas must be 1.  Default 'Always', for CronJobs `Never`.
+      --rm=false: If true, delete resources created in this command for attached containers.
+      --save-config=false: If true, the configuration of current object will be saved in its annotation. Otherwise, the annotation will be unchanged. This flag is useful when you want to perform kubectl apply on this object in the future.
+      --schedule='': A schedule in the Cron format the job should be run with.
+      --service-generator='service/v2': The name of the generator to use for creating a service.  Only used if --expose is true
+      --service-overrides='': An inline JSON override for the generated service object. If this is non-empty, it is used to override the generated object. Requires that the object supply a valid apiVersion field.  Only used if --expose is true.
+      --serviceaccount='': Service account to set in the pod spec
+  -i, --stdin=false: Keep stdin open on the container(s) in the pod, even if nothing is attached.
+      --template='': Template string or path to template file to use when -o=go-template, -o=go-template-file. The template format is golang templates [http://golang.org/pkg/text/template/#pkg-overview].
+      --timeout=0s: The length of time to wait before giving up on a delete, zero means determine a timeout from the size of the object
+  -t, --tty=false: Allocated a TTY for each container in the pod.
+      --wait=false: If true, wait for resources to be gone before returning. This waits for finalizers.
+
+	  
+--cluster='': 指定命令操作对象的集群
+--context='':  指定命令操作对象的上下文
+-n, --namespace='': 指定命令操作对象的Namespace
+
+Usage:
+  kubectl run NAME --image=image [--env="key=value"] [--port=port] [--replicas=replicas] [--dry-run=bool]
+[--overrides=inline-json] [--command] -- [COMMAND] [args...] [options]
+
+Use "kubectl options" for a list of global command-line options (applies to all commands).
+
+
+
+kubectl自动补全：
+# 安装bash-completion
+yum install -y epel-release.noarch
+yum install -y bash_completion
+# 添加补全脚本
+kubectl completion bash >/etc/bash_completion.d/kubectl
+
+
+
+

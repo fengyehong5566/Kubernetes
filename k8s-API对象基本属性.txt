@@ -1,0 +1,517 @@
+
+
+概念：
+	cluster：计算、存储和网络资源的集合，k8s利用这些资源运行各种基于容器的应用。
+	Master：Cluster的大脑，主要负责调度
+	Node：负责运行容器，监控并汇报容器状态，同时根据Master的要求管理容器生命周期。
+	Pod：k8s的最小公子单元，每个pod包含一个或多个容器
+		目的：a、可管理性；b、通信和资源共享
+		注：哪些容器应该放到一个Pod中？
+		答案是：这些容器联系必须非常紧密，而且需要直接共享资源。
+	Controller：控制器
+		1、Kubernetes通常不会直接创建Pod，而是通过Controller来管理Pod的。
+		2、Controller中定义了Pod的部署特性，比如有几个副本、在什么样的Node上运行等。
+		3、为了满足不同的业务场景，Kubernetes提供了多种Controller，包括Deployment、ReplicaSet、DaemonSet、StatefuleSet、Job等
+			Deloyment：最常用的控制器，通过创建Deployment来部署应用的。Deployment可以管理Pod的多个副本，并确保Pod按照期望的状态运行。
+			ReplicaSet：实现了Pod的多副本管理。使用Deployment时会自动创建ReplicaSet，也就是说Deployment是通过ReplicaSet来管理Pod的多个副本的，我们通常不需要直接使用ReplicaSet。
+			DaemonSet：用于每个Node最多只运行一个Pod副本的场景。DaemonSet通常用于运行daemon。
+			StatefuleSet：能够保证Pod的每个副本在整个生命周期中名称是不变的，而其他Controller不提供这个功能。
+						  当某个Pod发生故障需要删除并重新启动时，Pod的名称会发生变化，同时StatefuleSet会保证副本按照固定的顺序启动、更新或者删除。
+			Job：用于运行结束就删除的应用，而其他Controller中的Pod通常是长期持续运行。
+
+	service：定义了外界访问一组特定Pod的方式。
+		Service有自己的IP和端口，Service为Pod提供了负载均衡。
+		注：
+			k8s运行容器(Pod)和访问容器(Pod)这两项任务分别由Controller和Service执行
+
+	Namespace：将一个物理的Cluster逻辑上划分成多个虚拟Cluster，每个Cluster就是一个Namespace。不同Namespace里的资源是完全隔离的。
+		k8s默认创建2个Namespace：
+			$ kubectl get namespace
+			NAME          STATUS    AGE
+			default       Active    18s
+			kube-system   Active    18s
+		default：创建资源时，如果不指定，将被放到这个Namespace中。
+		kube-system：k8s自己创建的系统资源将放到这个Namespace中。
+		yml文件中通过"namespace： kube-public"知道namespace。
+		
+
+安装解析：
+	kubelet：运行在cluster中所有的Node上，负责启动Pod和容器
+	kubeadm：负责初始化Cluster
+	kubectl：k8s命令行工具。通过kubectl可以部署和管理应用，查看各种资源，创建、删除和更新各种组件。
+
+	初始化Master：
+		kubeadm init --apiserver-advertise-address 192.168.56.105 --pod-network-cidr=10.244.0.0/16 
+		--apiserver-advertise-address：指明用Master的哪个interface与Cluster的其他节点通信。如果Master有多个interface，建议明确指定，如果不指定，kubeadm会自动选择有默认网关的interface。
+		--pod-network-cidr：指定Pod网络的范围。Kubernetes支持多种网络方案，而且不同网络方案对--pod-network-cidr有自己的要求
+							这里设置为10.244.0.0/16是将使用flannel网络方案，必须设置成这个CIDR。
+
+	初始化过程：
+		(1) kubeadm执行初始化前的检查。
+		(2) 生成token和证书。
+		(3) 生成KubeConfig文件，kubelet需要用这个文件与Master通信。
+		(4) 安装Master组件，会从Google的Registry下载组件的Docker镜像。这一步可能会花一些时间，主要取决于网络质量。
+		(5) 安装附加组件kube-proxy和kube-dns。
+		(6) Kubernetes Master初始化成功。
+		(7) 提示如何配置kubectl
+		(8) 提示如何安装Pod网络
+		(9) 提示如何注册其他节点到Cluster
+
+架构：
+	k8s由Master和Node组成
+	Master节点：[运行服务]
+		kube-apiserver
+		kube-scheduler
+		kube-Controller-manager
+		etcd
+		Pod网络(flannel/Canal)
+	
+	1、API Server(kuber-apiserver)
+		负责提供HTTP/HTTPS RESTful API，即Kubernetes API。API Server是Kubernetes Cluster的前端接口，各种客户端工具（CLI或UI）以及Kubernetes其他组件可以通过它管理Cluster的各种资源。
+	2、Scheduler（kube-scheduler）
+		负责决定将Pod放在哪个Node上运行。Scheduler在调度时会充分考虑Cluster的拓扑结构，当前各个节点的负载，以及应用对高可用、性能、数据亲和性的需求。
+	3、Controller Manager（kube-controller-manager）
+		负责管理Cluster各种资源，保证资源处于预期的状态。
+		Controller Manager由多种controller组成，包括replication controller、endpoints controller、namespace controller、serviceaccounts controller等。
+		不同的controller管理不同的资源。例如，replication controller管理Deployment、StatefulSet、DaemonSet的生命周期，namespace controller管理Namespace资源。
+	4、etcd
+		etcd负责保存Kubernetes Cluster的配置信息和各种资源的状态信息。当数据发生变化时，etcd会快速地通知Kubernetes相关组件。
+	5、Pod网络
+		Pod要能够相互通信，Kubernetes  Cluster必须部署Pod网络，flannel是其中一个可选方案。
+
+	Node节点：[运行服务]
+		[Pod运行的地方，k8s支持Docker、rkt等容器Runtime。]
+		kubelet 
+		kube-proxy 
+		Pod网络
+
+	1、kubelet：
+		Node的agent，当Scheduler确定在某个Node上运行Pod后，会将Pod的具体配置信息（image、volume等）发送给该节点的kubelet，kubelet根据这些信息创建和运行容器，并向Master报告运行状态。
+	2、kube-proxy：
+		service在逻辑上代表了后端的多个Pod，外界通过service访问Pod。service接收到的请求是如何转发到Pod的呢？这就是kube-proxy要完成的工作。
+		每个Node都会运行kube-proxy服务，它负责将访问service的TCP/UPD数据流转发到后端的容器。如果有多个副本，kube-proxy会实现负载均衡。
+	3、Pod网络：
+		Pod要能够相互通信，K8s Cluster必须部署Pod网络，flannel是其中一个可选方案
+
+	注：
+		几乎所有的Kubernetes组件本身也运行在Pod里。
+		K8s的系统组件都被放到kube-system namespace中。
+		kubelet是唯一没有以容器形式运行的Kubernetes组件。
+
+k8s支持两种资源创建方式：
+	1、用kubectl命令直接创建
+		如：kubectl  run  nginx-deployment  --image=nginx:1.7.9  --replica=2
+
+	2、通过配置文件和kubectl apply创建[还能够对资源进行更新]
+		如：kubectl apply -f nginx.yml
+
+
+k8s部署应用配置文件：
+	例：
+	# vim  nginx.yml
+		apiVersion: extensions/v1beta1
+		kind: Deployment
+		metadate:
+			name: nginx-deployment 
+		spec:
+			replicas: 2
+			template: 
+				metadata:
+					labels:
+						app: web_server
+				spec:
+					containers:
+					  - name: nginx
+						image: nginx:1.7.9
+
+	apiVersion：API版本【当前配置类型的api版本，即kind键值的对应版本】
+	kind：API对象类型; 【要创建的资源类型，这里是Deployment】
+	metadata：该资源的元数据，name是必需的元数据项
+	spec：Replication Controller的规格【资源类型的规格说明】
+		replicas：指定Pod副本数
+		template：定义Pod模板，文件的重要部分
+			metadata：定义pod的元数据，至少要定义一个label。label的key和value可以任意指定
+			spec：描述pod的规格，此部分定义pod中每个容器的属性，name和image是必需的
+
+	注：出于安全考虑，默认情况下k8s不会将Pod调度到Master节点。
+		如果希望master也作为node节点，可以执行：
+			kubectl taint node k8s-master node-role.kubernetes.io/master-
+		如果想恢复Master Only状态，执行：
+			kubectl taint node k8s-master node-role.kubernetes.io/master=""
+		【上面的命令仅供参考，命令不全，k8s-master是指的Master服务器】
+
+控制Pod部署的位置：【用label】
+	默认配置下，Scheduler会将Pod调度到所有可用的Node。
+	但有时，我们希望将Pod部署到指定的Node，比如将有大量磁盘I/O的Pod部署到配置了SSD的Node；或者Pod需要GPU，需要运行在配置了GPU的节点上。
+	k8s通过lable来实现这个功能的
+
+	label是key-value对，各种资源都可以设置label，灵活添加各种自定义属性。
+	比如执行如下命令标注k8s-node1是配置了SSD的节点：
+		kubectl label node k8s-node1 disktype=ssd
+
+	查看label：
+		kubectl get node --show-labels
+		
+	在配置文件中指定node：
+		# vim  nginx.yml
+		apiVersion: extensions/v1beta1
+		kind: Deployment
+		metadate:
+			name: nginx-deployment 
+		spec:
+			replicas: 2
+			template: 
+				metadata:
+					labels:
+						app: web_server
+				spec:
+					containers:
+					  - name: nginx
+						image: nginx:1.7.9
+					nodeSelector:
+						disktype: ssd
+		在pod模板的spec里通过nodeSelector将Pod部署到具有label disktype=ssd的Node上
+		
+	删除label：
+		kubectl  label node k8s-node1  disktype-
+			"-" 即删除
+
+DaemonSet：
+	Deployment部署的副本Pod会分布在各个Node上，每个Node都可能运行好几个副本。
+	DaemonSet的不同之处在于：每个Node上最多只能运行一个副本。
+	DaemonSet的典型应用场景有：
+		1、在集群的每个节点上运行存储Daemon，比如glusterd或ceph。
+		2、在每个节点上运行日志收集Daemon，比如flunentd或logstash。
+		3、在每个节点上运行监控Daemon，比如Prometheus  Node Exporter或collectd。
+	Kubernetes自己就在用DaemonSet运行系统组件;
+		kubectl get daemonset --namespace=kube-system
+		结果中kube-flannel-ds和kube-proxy分别负责在每个节点上运行flannel和kube-proxy组件
+	
+	注：k8s集群中每个当前运行的资源都可以通过kubectl edit查看其配置和运行状态。
+
+通过service访问Pod：
+	Service从逻辑上代表了一组Pod，具体是哪些Pod则是由label来挑选的。
+	Service有自己的IP，而且这个IP是不变的。
+	客户端只需要访问Service的IP，K8s则负责建立和维护Service与Pod的映射关系。
+		kubectl get  service 
+		结果中会有个名为kubernetes的service，在集群内部通过该service访问Kubernetes API Server
+	
+	service的cluster-ip：
+		Pod的ip是在容器中配置的
+		cluster-ip通过iptables映射到Pod-ip
+		Cluster-IP是一个虚拟IP，是由Kubernetes节点上的iptables规则管理的。
+			Cluster的每一个节点都配置了相同的iptables规则，这样就确保了整个Cluster都能够通过Service的Cluster-IP访问Service
+
+	DNS访问service：【kube-dns组件】
+		k8s除了使用cluster-ip访问service，还提供了更为方便的DNS访问。
+		kube-dns是一个DNS服务器。每当有新的Service被创建，kube-dns会添加该Service的DNS记录。
+		Cluster中的Pod可以通过<SERVICE_NAME>.<NAMESPACE_NAME>访问Service。
+		kube-dns是部署在名为kube-system的namespace中的一个service
+			注：多个资源可以在一个YAML文件中定义，用“---”分割
+
+	外网访问service：
+		Kubernetes提供了多种类型的Service，默认是ClusterIP。
+			1、ClusterIP
+				Service通过Cluster内部的IP对外提供服务，只有Cluster内的节点和Pod可访问，这是默认的Service类型
+			2、NodePort
+				Service通过Cluster节点的静态端口对外提供服务。Cluster外部可以通过<NodeIP>:<NodePort>访问Service。
+			3、LoadBalancer
+				Service利用cloud provider特有的load balancer对外提供服务，cloud provider负责将load balancer的流量导向Service。
+				目前支持的cloud provider有GCP、AWS、Azur等
+		K8s是如何将<NodeIP>:<NodePort>映射到Pod的呢？
+			借助iptables
+		yml配置文件中通过
+			nodePort: 节点上监听的端口
+			port: cluster-ip监听的端口
+			targetPort: Pod监控的端口
+		
+Rolling update：
+	滚动更新是一次只更新一小部分副本，成功后再更新更多的副本，最终完成所有副本的更新。
+	滚动更新的最大好处是零停机，整个更新过程始终有副本在运行，从而保证了业务的连续性。
+	每次替换的Pod数量是可以定制的
+		Kubernetes使用两个参数
+			maxSurge
+			maxUnavailable
+		来精细控制Pod的替换数量，
+		
+	回滚：
+		更新命令：
+			kubectl apply -f filename.yml  --record
+			--record的作用将当前命令记录到revision记录中，可以知道每个revison对应的是哪个配置文件。为了查看记录更新是必须添加
+		历史查看：
+			kubectl rollout history deployment deploymentName
+		回滚：
+			kubectl rollout undo deployment httpd --to-revision=revisionNum
+			
+		kubectl  apply每次更新应用时，Kubernetes都会记录下当前的配置，保存为一个revision（版次），这样就可以回滚到某个特定revision。
+		默认配置下，Kubernetes只会保留最近的几个revision，可以在Deployment配置文件中通过revisionHistoryLimit属性增加revision数量。
+		
+Health Check：
+	强大的自愈能力是Kubernetes这类容器编排引擎的一个重要特性。
+	自愈的默认实现方式是自动重启发生故障的容器。
+	除此之外，用户还可以利用Liveness和Readiness探测机制设置更精细的健康检查，进而实现如下需求：
+		1、零停机部署。
+		2、避免部署无效的镜像。
+		3、更加安全的滚动升级
+
+	默认检查机制：
+		每个容器启动时都会执行一个进程，此进程由Dockerfile的CMD或ENTRYPOINT指定。如果进程退出时返回码非零，则认为容器发生故障，Kubernetes就会根据restartPolicy重启容器。
+		liveness：
+			Liveness探测让用户可以自定义判断容器是否健康的条件。如果探测失败，Kubernetes就会重启容器。
+			initialDelaySeconds：10   表示容器启动10秒后开始探测，这10秒一般是容器启动的准备时间
+			periodSeconds：5   代表每5秒执行一次Liveness探测
+		k8s如果连续执行3次Livenes探测失败，则会杀掉并重启容器。
+
+		Readiness：
+			Liveness探测可以告诉K8s什么时候通过重启容器实现自愈；
+			Readiness探测则是告诉K8s什么时候可以将容器加入到Service负载均衡池中，对外提供服务。
+
+		liveness和readiness比较：
+			1、Liveness探测和Readiness探测是两种Health Check机制，如果不特意配置，K8s将对两种探测采取相同的默认行为，即通过判断容器启动进程的返回值是否为零来判断探测是否成功。
+			2、两种配置方法完全一样，支持的配置参数也一样。
+				不同之处在于探测失败后的行为：
+					Liveness探测是重启容器;
+					Readiness探测则是将容器设置为不可用，不接收Service转发的请求。
+			3、两种探测是独立执行的，二者之间没有依赖，可以单独使用，也可以同时使用。
+				用Liveness探测判断容器是否需要重启以实现自愈;
+				用Readiness探测判断容器是否已经准备好对外提供服务;
+
+		Health Check在scale up中的应用：
+			对于多副本应用，当执行Scale Up操作时，新副本会作为backend被添加到Service的负载均衡中，与已有副本一起处理客户的请求。考虑到应用启动通常都需要一个准备阶段，比如加载缓存数据、连接数据库等，从容器启动到真正能够提供服务是需要一段时间的。我们可以通过Readiness探测判断容器是否就绪，避免将请求发送到还没有准备好的backend。
+		
+		maxSurge：
+			此参数控制滚动更新过程中副本总数超过DESIRED的上限。
+			maxSurge可以是整数(比如3)，也可以是百分百，向上取整。maxSurge默认值为25％。
+			例：若DESIRED为10，副本总数的最大值为roundUp(10 + 10 * 25％) =13，所以我们看到CURRENT就是13
+		maxUnavailable:
+			参数控制滚动更新过程中，不可用的副本相占DESIRED的最大比例。
+			maxUnavailable可以是整数(比如3)，也可以是百分百，向下取整。maxUnavailable默认值为25％
+			例：若DESIRED为10，可用的副本数至少要为：10-roundDown(10 * 25％)= 8，所以我们看到AVAILABLE是8
+		maxSurge值越大，初始创建的新副本数量就越多;
+		maxUnavailable值越大，初始销毁的旧副本数量就越多。
+		这两个参数在.spec.stratege.rollingUpdate[maxSurge/maxUnavailable]配置
+		
+数据管理：【volume】
+		Volume的生命周期独立于容器，Pod中的容器可能被销毁和重建，但Volume会被保留。
+		本质上，K8s Volume是一个目录，这一点与Docker Volume类似。
+		当Volume被mount到Pod，Pod中的所有容器都可以访问这个Volume。
+		K8s Volume也支持多种backend类型，包括：
+			emptyDir
+			hostPath
+			GCE Persistent Disk
+			AWS Elastic Block Store
+			NFS
+			Ceph
+		等，完整列表可参考https://kubernetes.io/docs/concepts/storage/volumes/#types-of-volumes
+		
+		emptyDir：
+			emptyDir是最基础的Volume类型。正如其名字所示，一个emptyDir Volume是Host上的一个空目录。
+			emptyDir  Volume对于容器来说是持久的，对于Pod则不是。当Pod从节点删除时，Volume的内容也会被删除。但如果只是容器被销毁而Pod还在，则Volume不受影响。
+			emptyDir Volume的生命周期与Pod一致
+			Pod中的所有容器都可以共享Volume，它们可以指定各自的mount路径
+			emptyDir类型是在Host上创建临时目录，其优点是能够方便地为Pod中的容器提供共享存储，不需要额外的配置。它不具备持久性，如果Pod不存在了，emptyDir也就没有了。根据这个特性，emptyDir特别适合Pod中的容器需要临时共享存储空间的场景，比如前面的生产者消费者用例。
+
+		hostPath:
+			将Docker Host文件系统中已经存在的目录mount给Pod的容器;
+			大部分应用都不会使用hostPath Volume，因为这实际上增加了Pod与节点的耦合，限制了Pod的使用;
+			一些需要访问K8s或Docker内部数据(配置文件和二进制库)的应用则需要使用hostPath
+				比如kube-apiserver和kube-controller-manager就是这样的应用
+					kubectl edit --namespace=kube-system pod kube-apiserver-k8s-master
+				查看kube-apiserver Pod的配置
+			如果Pod被销毁了，hostPath对应的目录会被保留，所以hostPath的持久性比emptyDir强。不过一旦Host崩溃，hostPath也就无法访问了
+
+		外部Storage Provider：
+			相对于emptyDir和hostPath，这些Volume类型的最大特点就是不依赖Kubernetes。
+			Volume的底层基础设施由独立的存储系统管理，与Kubernetes集群是分离的。数据被持久化后，即使整个Kubernetes崩溃也不会受损
+
+	PersistentVolume & PersistentVolumeClaim:
+		PersistentVolume（PV）是外部存储系统中的一块存储空间，由管理员创建和维护。与Volume一样，PV具有持久性，生命周期独立于Pod。
+		PersistentVolumeClaim（PVC）是对PV的申请（Claim）。
+			PVC通常由普通用户创建和维护。
+			当需要为Pod分配存储资源时，用户可以创建一个PVC，指明存储资源的容量大小和访问模式(比如只读)等信息，Kubernetes会查找并提供满足条件的PV。
+		K8s支持多种类型的PersistentVolume，如AWS  EBS、Ceph、NFS等，完整列表请参考https://kubernetes.io/docs/concepts/storage/persistent-volumes/#types-of-persistent-volumes。
+
+Secret && Configmap
+	Secret会以密文的方式存储数据，避免了直接在配置文件中保存敏感信息。
+	Secret会以Volume的形式被mount到Pod，容器可通过文件的方式使用Secret中的敏感数据；容器也可以环境变量的方式使用这些数据。
+		
+	Secret创建：
+		1、通过--from-literal
+			每个--from-literal对应一个信息条目
+		2、通过--from-file
+			每个文件内容对应一个信息条目。
+		3、通过--from-env-file
+			文件中每行Key=Value对应一个信息条目
+		4、通过Yaml配置文件
+			apiVersion: v1
+			kind: Secret
+			metadata:
+				name: mysecret
+			data:
+				username: ***
+				password: ***
+		文件中敏感数据必须通过base64编码：
+			编码：echo  -n 123456  | base64
+			反编码：echo -n ***  | base64 --decode
+
+	Secret查看：
+		kubectl get secret mysecret
+		kubectl describe secret mysecret
+		kubectl edit secret mysecret 
+
+	Pod中使用secret：
+		1、Volume方式
+			每条敏感数据(key:value)在容器中都会创建一个内容为value的文件，文件名为key，且value为明文。
+			volume方式使用Secret支持动态更新，Secret更新后，容器中的数据也会更新。
+			通过Volume使用Secret，容器必须从文件读取数据
+
+		2、环境变量的方式
+			方便，但不支持动态更新
+
+	ConfigMap：
+		Secret为Pod提供密码、token、私钥等敏感信息。
+		ConfigMap可以用来提供应用的配置信息
+		ConfigMap和Secret的创建方式类似，主要不同的是数据以明文的形式存放
+		
+		创建和查看方式与Secret类似
+
+Helm--包管理器
+	Helm架构：
+		Helm是k8s平台的包管理器，类似centos系统中的yum
+		Helm有两个重要的概念：chart和release
+			chart：是创建一个应用的信息集合，包括各种K8s对象的配置模板、参数定义、依赖关系、文档说明等。
+				   是应用部署的自包含逻辑单元。可以将chart想象成apt、yum中的软件安装包
+			release：是chart的运行实例，代表了一个正在运行的应用。当chart被安装到K8s集群，就生成一个release。chart能够多次安装到同一个集群，每次安装都是一个release。
+		Helm是包管理工具，这里的包就是指的chart。
+		Helm能够：
+			从零创建新chart。
+			与存储chart的仓库交互，拉取、保存和更新chart。
+			在K8s集群中安装和卸载release。
+			更新、回滚和测试release。
+		Helm包含两个组件：Helm客户端和Tiller服务器
+			helm client ——gRPC——>  Tiller ————> KubeAPI
+			Helm客户端是终端用户使用的命令行工具，用户可以：
+				在本地开发chart。
+				管理chart仓库。
+				与Tiller服务器交互。
+				在远程Kubernetes集群上安装chart。
+				查看release信息。
+				升级或卸载已有的release
+			Tiller服务器运行在Kubernetes集群中，它会处理Helm客户端的请求，与Kubernetes API Server交互。
+			Tiller服务器负责：
+				监听来自Helm客户端的请求。
+				通过chart构建release。
+				在K8s中安装chart，并跟踪release的状态。
+				通过API Server升级或卸载已有的release。
+
+	Chart详解：
+		chart是Helm的应用打包格式。由一系列文件组成，这些文件描述了K8s部署应用时所需要的资源，如Service、Deployment、PersistentVolumeClaim、Secret、ConfigMap等。
+		chart将资源定义文件放置在预定义的目录结构中，通常整个chart被打包成tar包，而且标注上版本信息，便于helm部署。
+		
+		chart目录结构：
+			一旦安装了某个chart，可以在~/.helm/cache/archive中找到chart的tar包。
+			以一个mysql chart为例：
+				mysql
+				|—— Chart.yaml
+				|—— README.md
+				|—— templates
+				|	|—— configmap.yaml
+				|	|—— deployment.yaml
+				|	|—— _helpers.tpl
+				|	|—— NOTES.txt
+				|	|—— pvc.yaml
+				|	|—— secrets.yaml
+				|	|—— svc.yaml
+				|—— values.yaml
+			目录名就是chart的名字(不带版本信息)，上例是mysql
+				Chart.yaml：描述chart的概要信息，必须含有name和version
+				README.md：Markdown格式的README文件，相当于chart的使用文档，可选
+				LICENSE：文本文件，描述chart的许可信息，可选、
+				requirements.yaml：
+					chart可能依赖其他的chart，这些依赖关系通过requirement.yaml指定，在安装过程中依赖的chart也会被一起安装
+				values.yaml：chart支持在安装时根据参数进行定制化配置，values.yml则提供配置参数的默认值
+				templates目录：
+					存放各类k8s资源的配置模板，helm会将根据values.yaml中的参数注入模板中，生成标注的yaml配置文件
+					模板是chart最重要的部分，也是helm最强大的地方。模板增加了应用的灵活性，能够适用不同环境。
+				templates/NOTES.txt:
+					chart的简易使用文档，chart安装成功后会显示此文档内容。Helm也可以动态注入参数值。
+
+		如果存在一些信息多个模板都会用到，则可在templates/_helpers.tpl中将其定义为子模板，然后通过templates函数引用
+		Chart和Release是Helm预定义的对象，每个对象都有自己的属性，可以在模板中使用
+		Values也是预定义的对象，代表的是values.yaml文件
+		模板将chart参数化了，通过values.yaml可以灵活定制应用。
+		无论多复杂的应用，用户都可以用Go模板语言编写出chart。无非是使用到更多的函数、对象和流控制。
+		对于初学者，建议尽量参考官方的chart。根据二八定律，这些chart已经覆盖了绝大部分情况，而且采用了最佳实践。如何遇到不懂的函数、对象和其他语法，可参考官网文档https://docs.helm.sh。
+		
+k8s网络：
+	1、pod内容器之间的通信
+	2、pod之间通信
+	3、Pod与Service的通信
+	4、外部访问
+		
+		
+k8s资源管理：
+	计算资源管理(Compute Resources)
+	资源配置管理范围管理(LimitRange)
+	服务质量管理(QoS)
+	资源配额管理(ResourceQuota)
+	
+	1、计算资源管理(Compute Resource)
+		计算资源配置项分为两种：
+			a、资源请求(Resource Requests)：表示容器希望被分配到的、可完全保证的资源量，Request的值会提供给k8s调度器以便于优化基于资源请求的容器调度
+			b、资源限制(Resource Limits)：limits是容器最多能使用到的资源量的上限，这个上限值会影响节点上发生资源竞争时的解决策略
+		计算资源的资源类型分为2种：cpu和内存
+		
+		Pod和容器的Requests和limits
+			spec.container[].resources.requests.cpu
+			spec.container[].resource.limits.cpu
+			spec.container[].resource.requests.memory
+			spec.container[].resource.limits.memory
+		以上4个参数分别对应cpu和内存的request和limits，其特点：
+			1、Request和limits都是可选的
+			2、如果Request没有配置，那么默认会被设置问等于limits
+			3、任何情况下Limits都应该设置为大于或等于Requests
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+拓展：
+	linux提供了6中NameSpace隔离的系统调用：
+		linux namespace			系统调用参数			隔离内容
+		UTS						CLONE_NEWUTS		主机名与域名
+		IPC						CLONE_NEWIPC		信号量、消息队列和共享内存
+		PID						CLONE_NEWPID		进程编号
+		Network					CLONE_NEWNET		网络设备、网络栈、端口等
+		Mount					CLONE_NEWNS			挂载点(文件系统)
+		User					CLONE_NEWUSER		用户和用户组
+		
+	Pod包含的一组容器，共享内容为linux namespace中的PID、Network、IPC和UTS，此外还可以共享数据卷来实现文件系统的共享。
+	
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		

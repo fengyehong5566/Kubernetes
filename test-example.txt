@@ -1,0 +1,259 @@
+$ kubectl get deployment
+NAME                  DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+kubernetes-bootcamp   2         2         2            2           9m
+$ kubectl  describe deployment  kubernetes-bootcamp
+Name:                   kubernetes-bootcamp
+Namespace:              default
+CreationTimestamp:      Thu, 16 May 2019 09:20:40 +0000
+Labels:                 run=kubernetes-bootcamp
+Annotations:            deployment.kubernetes.io/revision=1
+Selector:               run=kubernetes-bootcamp
+Replicas:               2 desired | 2 updated | 2 total | 2 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  run=kubernetes-bootcamp
+  Containers:
+   kubernetes-bootcamp:
+    Image:        gcr.io/google-samples/kubernetes-bootcamp:v1
+    Port:         8080/TCP
+    Host Port:    0/TCP
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   kubernetes-bootcamp-5c69669756 (2/2 replicas created)
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  10m   deployment-controller  Scaled up replica set kubernetes-bootcamp-5c69669756 to 2
+  
+$ kubectl get replicaset
+NAME                             DESIRED   CURRENT   READY     AGE
+kubernetes-bootcamp-5c69669756   2         2         2         10m
+$ kubectl describe kubernetes-bootcamp-5c69669756
+error: the server doesn't have a resource type "kubernetes-bootcamp-5c69669756"
+$ kubectl describe replicaset kubernetes-bootcamp-5c69669756
+Name:           kubernetes-bootcamp-5c69669756
+Namespace:      default
+Selector:       pod-template-hash=1725225312,run=kubernetes-bootcamp
+Labels:         pod-template-hash=1725225312
+                run=kubernetes-bootcamp
+Annotations:    deployment.kubernetes.io/desired-replicas=2
+                deployment.kubernetes.io/max-replicas=3
+                deployment.kubernetes.io/revision=1
+Controlled By:  Deployment/kubernetes-bootcamp
+Replicas:       2 current / 2 desired
+Pods Status:    2 Running / 0 Waiting / 0 Succeeded / 0 Failed
+Pod Template:
+  Labels:  pod-template-hash=1725225312
+           run=kubernetes-bootcamp
+  Containers:
+   kubernetes-bootcamp:
+    Image:        gcr.io/google-samples/kubernetes-bootcamp:v1
+    Port:         8080/TCP
+    Host Port:    0/TCP
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Events:
+  Type    Reason            Age   From                   Message
+  ----    ------            ----  ----                   -------
+  Normal  SuccessfulCreate  11m   replicaset-controller  Created pod: kubernetes-bootcamp-5c69669756-v9wgx
+  Normal  SuccessfulCreate  11m   replicaset-controller  Created pod: kubernetes-bootcamp-5c69669756-6ffs9
+$ kubectl get pod
+NAME                                   READY     STATUS    RESTARTS   AGE
+kubernetes-bootcamp-5c69669756-6ffs9   1/1       Running   0          11m
+kubernetes-bootcamp-5c69669756-v9wgx   1/1       Running   0          11m
+$ kubectl describe pod kubernetes-bootcamp-5c69669756-6ffs9
+Name:           kubernetes-bootcamp-5c69669756-6ffs9
+Namespace:      default
+Node:           minikube/172.17.0.85
+Start Time:     Thu, 16 May 2019 09:20:40 +0000
+Labels:         pod-template-hash=1725225312
+                run=kubernetes-bootcamp
+Annotations:    <none>
+Status:         Running
+IP:             172.18.0.5
+Controlled By:  ReplicaSet/kubernetes-bootcamp-5c69669756
+Containers:
+  kubernetes-bootcamp:
+    Container ID:   docker://1d3bce21594f1361869c61ac66b6713cb0cde7d387a10d3532e2d8c57bf65e79
+    Image:          gcr.io/google-samples/kubernetes-bootcamp:v1
+    Image ID:       docker-pullable://gcr.io/google-samples/kubernetes-bootcamp@sha256:0d6b8ee63bb57c5f5b6156f446b3bc3b3c143d233037f3a2f00e279c8fcc64af
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Thu, 16 May 2019 09:20:42 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-dlggw (ro)
+Conditions:
+  Type           Status
+  Initialized    True
+  Ready          True
+  PodScheduled   True
+Volumes:
+  default-token-dlggw:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-dlggw
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute for 300s
+                 node.kubernetes.io/unreachable:NoExecute for 300s
+Events:
+  Type    Reason                 Age   From               Message
+  ----    ------                 ----  ----               -------
+  Normal  Scheduled              12m   default-scheduler  Successfully assigned kubernetes-bootcamp-5c69669756-6ffs9 to minikube
+  Normal  SuccessfulMountVolume  12m   kubelet, minikube  MountVolume.SetUp succeeded for volume "default-token-dlggw"
+  Normal  Pulled                 12m   kubelet, minikube  Container image "gcr.io/google-samples/kubernetes-bootcamp:v1" already present on machine
+  Normal  Created                12m   kubelet, minikube  Created container
+  Normal  Started                12m   kubelet, minikube  Started container
+$ kubectl describe pod kubernetes-bootcamp-5c69669756-v9wgx
+Name:           kubernetes-bootcamp-5c69669756-v9wgx
+Namespace:      default
+Node:           minikube/172.17.0.85
+Start Time:     Thu, 16 May 2019 09:20:40 +0000
+Labels:         pod-template-hash=1725225312
+                run=kubernetes-bootcamp
+Annotations:    <none>
+Status:         Running
+IP:             172.18.0.4
+Controlled By:  ReplicaSet/kubernetes-bootcamp-5c69669756
+Containers:
+  kubernetes-bootcamp:
+    Container ID:   docker://b0db79fa65f54d5d98417c85a54a9a1b4620a65d22b99e5b468967e2b865d81d
+    Image:          gcr.io/google-samples/kubernetes-bootcamp:v1
+    Image ID:       docker-pullable://gcr.io/google-samples/kubernetes-bootcamp@sha256:0d6b8ee63bb57c5f5b6156f446b3bc3b3c143d233037f3a2f00e279c8fcc64af
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Thu, 16 May 2019 09:20:42 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-dlggw (ro)
+Conditions:
+  Type           Status
+  Initialized    True
+  Ready          True
+  PodScheduled   True
+Volumes:
+  default-token-dlggw:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-dlggw
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute for 300s
+                 node.kubernetes.io/unreachable:NoExecute for 300s
+Events:
+  Type    Reason                 Age   From               Message
+  ----    ------                 ----  ----               -------
+  Normal  Scheduled              12m   default-scheduler  Successfully assigned kubernetes-bootcamp-5c69669756-v9wgx to minikube
+  Normal  SuccessfulMountVolume  12m   kubelet, minikube  MountVolume.SetUp succeeded for volume "default-token-dlggw"
+  Normal  Pulled                 12m   kubelet, minikube  Container image "gcr.io/google-samples/kubernetes-bootcamp:v1" already present on machine
+  Normal  Created                12m   kubelet, minikube  Created container
+  Normal  Started                12m   kubelet, minikube  Started container
+  
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  $ iptables-save
+# Generated by iptables-save v1.6.0 on Fri May 17 02:51:35 2019
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [12:720]
+:POSTROUTING ACCEPT [12:720]
+:DOCKER - [0:0]
+:KUBE-MARK-DROP - [0:0]
+:KUBE-MARK-MASQ - [0:0]
+:KUBE-NODEPORTS - [0:0]
+:KUBE-POSTROUTING - [0:0]
+:KUBE-SEP-22FI2MUOQ3MEHFPM - [0:0]
+:KUBE-SEP-67BN3S4F2UNYNOEU - [0:0]
+:KUBE-SEP-HD7YEX2KZ6MK7DOJ - [0:0]
+:KUBE-SEP-KLMOTHZKN3LNJ7NB - [0:0]
+:KUBE-SEP-S77W6PMQVTFQMRF2 - [0:0]
+:KUBE-SERVICES - [0:0]
+:KUBE-SVC-ERIFXISQEP7F7OF4 - [0:0]
+:KUBE-SVC-NPX46M4PTMTKRN6Y - [0:0]
+:KUBE-SVC-TCOU7JCQXEZGVUNU - [0:0]
+-A PREROUTING -m comment --comment "kubernetes service portals" -j KUBE-SERVICES
+-A PREROUTING -m addrtype --dst-type LOCAL -j DOCKER
+-A OUTPUT -m comment --comment "kubernetes service portals" -j KUBE-SERVICES
+-A OUTPUT ! -d 127.0.0.0/8 -m addrtype --dst-type LOCAL -j DOCKER
+-A POSTROUTING -m comment --comment "kubernetes postrouting rules" -j KUBE-POSTROUTING
+-A POSTROUTING -s 172.18.0.0/24 ! -o docker0 -j MASQUERADE
+-A DOCKER -i docker0 -j RETURN
+-A KUBE-MARK-DROP -j MARK --set-xmark 0x8000/0x8000
+-A KUBE-MARK-MASQ -j MARK --set-xmark 0x4000/0x4000
+-A KUBE-POSTROUTING -m comment --comment "kubernetes service traffic requiring SNAT" -m mark --mark 0x4000/0x4000 -j MASQUERADE
+-A KUBE-SEP-22FI2MUOQ3MEHFPM -s 172.18.0.4/32 -j KUBE-MARK-MASQ
+-A KUBE-SEP-22FI2MUOQ3MEHFPM -p udp -m udp -j DNAT --to-destination 172.18.0.4:53
+-A KUBE-SEP-67BN3S4F2UNYNOEU -s 172.17.0.20/32 -j KUBE-MARK-MASQ
+-A KUBE-SEP-67BN3S4F2UNYNOEU -p tcp -m tcp -j DNAT --to-destination 172.17.0.20:8443
+-A KUBE-SEP-HD7YEX2KZ6MK7DOJ -s 172.18.0.4/32 -j KUBE-MARK-MASQ
+-A KUBE-SEP-HD7YEX2KZ6MK7DOJ -p tcp -m tcp -j DNAT --to-destination 172.18.0.4:53
+-A KUBE-SEP-KLMOTHZKN3LNJ7NB -s 172.18.0.2/32 -j KUBE-MARK-MASQ
+-A KUBE-SEP-KLMOTHZKN3LNJ7NB -p udp -m udp -j DNAT --to-destination 172.18.0.2:53
+-A KUBE-SEP-S77W6PMQVTFQMRF2 -s 172.18.0.2/32 -j KUBE-MARK-MASQ
+-A KUBE-SEP-S77W6PMQVTFQMRF2 -p tcp -m tcp -j DNAT --to-destination 172.18.0.2:53
+-A KUBE-SERVICES -d 10.96.0.10/32 -p udp -m comment --comment "kube-system/kube-dns:dns cluster IP" -m udp --dport 53 -j KUBE-SVC-TCOU7JCQXEZGVUNU
+-A KUBE-SERVICES -d 10.96.0.10/32 -p tcp -m comment --comment "kube-system/kube-dns:dns-tcp cluster IP" -m tcp --dport 53 -j KUBE-SVC-ERIFXISQEP7F7OF4
+-A KUBE-SERVICES -d 10.96.0.1/32 -p tcp -m comment --comment "default/kubernetes:https cluster IP" -m tcp --dport 443 -j KUBE-SVC-NPX46M4PTMTKRN6Y
+-A KUBE-SERVICES -m comment --comment "kubernetes service nodeports; NOTE: this must be the last rule in this chain" -m addrtype --dst-type LOCAL -j KUBE-NODEPORTS
+-A KUBE-SVC-ERIFXISQEP7F7OF4 -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-S77W6PMQVTFQMRF2
+-A KUBE-SVC-ERIFXISQEP7F7OF4 -j KUBE-SEP-HD7YEX2KZ6MK7DOJ
+-A KUBE-SVC-NPX46M4PTMTKRN6Y -j KUBE-SEP-67BN3S4F2UNYNOEU
+-A KUBE-SVC-TCOU7JCQXEZGVUNU -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-KLMOTHZKN3LNJ7NB
+-A KUBE-SVC-TCOU7JCQXEZGVUNU -j KUBE-SEP-22FI2MUOQ3MEHFPM
+COMMIT
+# Completed on Fri May 17 02:51:35 2019
+# Generated by iptables-save v1.6.0 on Fri May 17 02:51:35 2019
+*filter
+:INPUT ACCEPT [1417:239777]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [1399:261553]
+:DOCKER - [0:0]
+:DOCKER-ISOLATION - [0:0]
+:DOCKER-USER - [0:0]
+:KUBE-EXTERNAL-SERVICES - [0:0]
+:KUBE-FIREWALL - [0:0]
+:KUBE-FORWARD - [0:0]
+:KUBE-SERVICES - [0:0]
+-A INPUT -m conntrack --ctstate NEW -m comment --comment "kubernetes externally-visible service portals" -j KUBE-EXTERNAL-SERVICES
+-A INPUT -j KUBE-FIREWALL
+-A FORWARD -m comment --comment "kubernetes forwarding rules" -j KUBE-FORWARD
+-A FORWARD -j DOCKER-USER
+-A FORWARD -j DOCKER-ISOLATION
+-A FORWARD -o docker0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A FORWARD -o docker0 -j DOCKER
+-A FORWARD -i docker0 ! -o docker0 -j ACCEPT
+-A FORWARD -i docker0 -o docker0 -j ACCEPT
+-A OUTPUT -m conntrack --ctstate NEW -m comment --comment "kubernetes service portals" -j KUBE-SERVICES
+-A OUTPUT -j KUBE-FIREWALL
+-A DOCKER-ISOLATION -j RETURN
+-A DOCKER-USER -j RETURN
+-A KUBE-FIREWALL -m comment --comment "kubernetes firewall for dropping marked packets" -m mark --mark 0x8000/0x8000 -j DROP
+-A KUBE-FORWARD -m comment --comment "kubernetes forwarding rules" -m mark --mark 0x4000/0x4000 -j ACCEPT
+COMMIT
+# Completed on Fri May 17 02:51:35 2019

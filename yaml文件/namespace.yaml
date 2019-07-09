@@ -1,0 +1,40 @@
+在k8s集群中实现分组
+在一个组织内部，不同的工作组可以在同一个k8s集群中工作，k8s通过命名空间和context的设置来对不同的工作组进行区分，使得它们既可以共享同一个k8s集群也能够互不干扰。
+	如：开发组：在集群中需要不断创建、修改、删除各种pod、RC、Service等资源对象，以便实现敏捷开发的过程。
+		运维组：需要使用严格的权限设置来确保生产系统中的Pod、RC、Service处于正常运行状态且不会被误操作
+
+
+1、首先创建两个命名空间：
+# vim namespace-development.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+	name: development
+
+#vim namespace-production.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+	name: production
+
+# kubectl create -f namespace-development.yaml
+# kubectl create -f namespace-production.yaml
+
+2、定义Context(运行环境)
+通过 kubectl config set-context 命令定义context，并将context置于之前创建的命名空间中：
+# kubectl config set-cluster kubernetes-cluster --server=https://192.168.1.128:8080
+# kubectl config set-context ctx-dev --namespace=development --cluster=kubernetes-cluster --user=dev
+# kubectl config set-context ctx-prod --namespace=production --cluster-kubenetes-cluster --user=prod
+
+3、设置工作组在特定context环境中工作
+使用kubectl config user-context <context-name>来设置当前运行环境
+下面的命令将吧当前运行环境设置为“ctx-dev”
+# kubectl congfig use-context ctx-dev
+切换环境：
+# kubectl config use-context ctx-prod
+
+
+
+
+
+

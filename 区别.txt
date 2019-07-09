@@ -1,0 +1,43 @@
+容器和pod：
+	容器：在docker中，是最小处理单位。docker的增删改查的对象就是容器
+		容器之间是隔离的，隔离是基于linux Namespace实现
+		linux内核中提供6中Namespace隔离的系统调用：
+			linux Namespace		系统调用参数		隔离内容
+		 -------------------------------------------------------
+				UTS			|	CLONE_NEWUTS	|	主机名和域名
+				IPC			|	CLONE_NEWIPC	|	信号量/消息队列/共享内存
+				PID			|	CLONE_NEWPID	|	进程编号
+				Network		|	CLONE_NEWNET	|	网络设备/网络栈/端口等
+				Mount		|	CLONE_NEWNS		|	挂载点(文件系统)
+				User		|	CLONE_NEWUSER	|	用户和用户组
+	Pod：包含一个或多个 相关的容器
+		pod也是一个隔离体，但pod包含的一组容器又是共享的(当前共享的linux Namespace包含：PID/Network/IPC/UTS);
+		kubernetes中的数据卷是pod级别的，不是容器级别的
+		pod是容器的集合，容器时真正的执行体。
+		
+		pod的设计不是为了运行 同一个应用 的 多个实例，是运行一个应用多个紧密联系的程序。而每个程序运行在单独的容器中，以Pod的形式组合成一个应用。
+	
+镜像：
+	kubernetes中镜像可以设置下载策略：
+		Always：每次都下载最新的镜像
+		Never：只使用本地镜像，从不下载
+		IfNotPresent：只有当本地没有的时候才下载
+	
+	Pod定义一个容器镜像的配置示例：
+		name: hello
+		image: "ubuntu:14.04"
+		imagePullPolicy: Always
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

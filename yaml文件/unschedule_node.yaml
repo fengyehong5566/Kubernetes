@@ -1,0 +1,32 @@
+当对k8s集群里的node节点进行硬件的维护或升级时，可以从k8s集群里隔离出node
+方法1：使用yaml配置文件
+#	在spec部分指定unschedule为true
+#	通过replace完成对node状态的修改
+		#kubectl replace  -f unschedule_node.yaml
+
+		
+# vim  unschedule_node.yaml
+apiVersion: v1
+kind: Node
+metadata:
+	name: k8s-node-1
+	labels:
+		kubernetes.io/hostname: k8s-node-1
+spec:
+	unschedulable: true
+	
+	
+方法2：使用命令
+	kubectl patch  node k8s-node-1  -p '{"spec":{"unschedulable":true}}'
+	
+
+方法3：子命令cordon和uncordon
+	kubectl cordon k8s-node-1 
+	kubectl uncordon  k8s-node-1
+
+注意：
+	1、node脱离集群后，系统不会再向node进行调度
+	2、已经运行在该node节点的pod不会停止，需要管理员手动进行停止。
+	3、重新纳入集群：
+		修改unschedulable设置为false
+		
