@@ -1,0 +1,149 @@
+// 生成 CA 证书文件
+# mkdir /opt/certs
+# cat >/opt/certs/ca-csr.json <<EOF
+{
+    "CN": "kubernetes",     //Common Name, 浏览器使用该字段验证网站是否合法，一般写的是域名。非常重要
+    "hosts": [
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",   //Country， 国家
+            "ST": "Beijing",   //  State， 州 省
+            "L": "Beijing",  // Locality， 地区 城市
+            "O": "k8s",   // Organization Name， 组织名字， 公司名称
+            "OU": "ops"  // Organization Unit Name，组织单位名称，公司部门
+        }
+    ],
+    "ca": {
+        "expiry": "175200h"   //期限
+    }
+}
+EOF
+
+# cfssl gencert -initca ca-csr.json | cfssljson -bare ca
+# ls
+ca.csr  ca-csr.json  ca-key.pem  ca.pem
+
+//创建 CA 证书的Json配置文件
+# cat >/opt/certs/ca-config.json <<EOF
+{
+    "signing": {
+        "default": {
+            "expiry": "175200h"
+        },
+        "profiles": {
+            "server": {           //生成服务端证书，使用 -profile=service
+                "expiry": "175200h",
+                "usages": [
+                    "signing",
+                    "key encipherment",
+                    "server auth"
+                ]
+            },
+            "client": {          //生成客户端证书，使用 -profile=client 用于服务端认证客户端，如etcdctl，etcd proxy， docker客户端
+                "expiry": "175200h",
+                "usages": [
+                    "signing",
+                    "key encipherment",
+                    "client auth"
+                ]
+            },
+            "peer": {          //生成双向证书，使用 -profile=peer 如etcd集群成员相互通信
+                "expiry": "175200h",
+                "usages": [
+                    "signing",
+                    "key encipherment",
+                    "server auth",
+                    "client auth"
+                ]
+            }
+        }
+    }
+} 
+EOF
+
+// 生成自签发请求（csr）的json文件
+# cat >/opt/certs/etcd-peer-csr.json <<EOF
+{
+    "CN": "k8s-etcd",
+    "hosts": [
+        "10.4.7.11",
+        "10.4.7.12",
+        "10.4.7.21",
+        "10.4.7.22"
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "ST": "beijing",
+            "L": "beijing",
+            "O": "zq",
+            "OU": "ops"
+        }
+    ]
+}
+EOF
+
+# cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json --profile=peer etcd-peer-csr.jgon | cfssljson -bare etcd-peer
+
+//用于apiserver和etcd之间的通信
+# cat >/opt/certs/client-csr.json <<EOF
+{
+    "CN": "k8s-node",
+    "hosts": [
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "ST": "beijing",
+            "L": "beijing",
+            "O": "zq",
+            "OU": "ops"
+        }
+    ]
+}
+EOF
+
+// 生成client证书文件
+#cfssl gencert   -ca=ca.pem   -ca-key=ca-key.pem  -config=ca-config.json  -profile=client   client-csr.json |cfssl-json -bare client
+[root@hdss7-200 certs]# ls |grep client
+client.csr  client-csr.json  client-key.pem   client.pem
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

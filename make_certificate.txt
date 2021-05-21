@@ -1,0 +1,136 @@
+# mkdir /opt/certs
+# cat >/opt/certs/ca-csr.json <<EOF
+{
+    "CN": "zqcd",
+    "hosts": [
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "ST": "chengdu",
+            "L": "chengdu",
+            "O": "zq",
+            "OU": "ops"
+        }
+    ],
+    "ca": {
+        "expiry": "175200h"
+    }
+}
+EOF
+
+# cfssl gencert -initca ca-csr.json | cfssljson -bare ca
+# ls
+ca.csr  ca-csr.json  ca-key.pem  ca.pem
+
+# cat >/opt/certs/ca-config.json <<EOF
+{
+    "signing": {
+        "default": {
+            "expiry": "175200h"
+        },
+        "profiles": {
+            "server": {
+                "expiry": "175200h",
+                "usages": [
+                    "signing",
+                    "key encipherment",
+                    "server auth"
+                ]
+            },
+            "client": {
+                "expiry": "175200h",
+                "usages": [
+                    "signing",
+                    "key encipherment",
+                    "client auth"
+                ]
+            },
+            "peer": {
+                "expiry": "175200h",
+                "usages": [
+                    "signing",
+                    "key encipherment",
+                    "server auth",
+                    "client auth"
+                ]
+            }
+        }
+    }
+} 
+EOF
+
+# cat >/opt/certs/etcd-peer-csr.json <<EOF
+{
+    "CN": "k8s-etcd",
+    "hosts": [
+        "10.4.7.11",
+        "10.4.7.12",
+        "10.4.7.21",
+        "10.4.7.22"
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "ST": "beijing",
+            "L": "beijing",
+            "O": "zq",
+            "OU": "ops"
+        }
+    ]
+}
+EOF
+
+# cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json --profile=peer etcd-peer-csr.jgon | cfssljson -bare etcd-peer
+
+//用于apiserver和etcd之间的通信
+# cat >/opt/certs/client-csr.json <<EOF
+{
+    "CN": "k8s-node",
+    "hosts": [
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "ST": "beijing",
+            "L": "beijing",
+            "O": "zq",
+            "OU": "ops"
+        }
+    ]
+}
+EOF
+
+// 生成client证书文件
+#cfssl gencert \
+      -ca=ca.pem \
+      -ca-key=ca-key.pem \
+      -config=ca-config.json \
+      -profile=client \
+      client-csr.json |cfssl-json -bare client
+[root@hdss7-200 certs]# ls |grep client
+client.csr  client-csr.json  client-key.pem   client.pem
+
+
+
+
+
+
+
+
+
+
+
+
